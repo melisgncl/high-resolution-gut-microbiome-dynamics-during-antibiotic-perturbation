@@ -1,0 +1,9 @@
+# pip fallback; environment.yml is the primary spec.
+# Lower bounds, not pins: the figures were last built with
+# numpy 2.4.3, scipy 1.17.1, pandas 2.3.3, matplotlib 3.10.8 on Python 3.13.11.
+numpy>=2.0
+scipy>=1.14
+pandas>=2.2
+matplotlib>=3.9
+pytest>=8.0
+jupyterlab>=4.0

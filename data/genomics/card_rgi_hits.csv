@@ -1,0 +1,14 @@
+gene,drug_class,mechanism,identity_pct
+vanT (vanG cluster),Glycopeptide,Target alteration,32.5
+vanW (vanG cluster),Glycopeptide,Target alteration,37.7
+vanT (vanG cluster),Glycopeptide,Target alteration,35.5
+LlmA 23S rRNA MTase,Lincosamide,Target alteration,100.0
+vanX (vanM cluster),Glycopeptide,Target alteration,72.6
+vanI,Glycopeptide,Target alteration,68.2
+vanH (vanF cluster),Glycopeptide,Target alteration,65.3
+qacG,Disinfecting agent,Antibiotic efflux,57.0
+FosBx1,Fosfomycin,Antibiotic inactivation,100.0
+vanX (vanP cluster),Glycopeptide,Target alteration,48.5
+vanW (vanI cluster),Glycopeptide,Target alteration,38.1
+vanY (vanG cluster),Glycopeptide,Target alteration,32.8
+vanY (vanA cluster),Glycopeptide,Target alteration,52.2

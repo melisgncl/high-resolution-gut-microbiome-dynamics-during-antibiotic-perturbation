@@ -1,0 +1,24 @@
+# figures/_out/ holds the main-figure panels (Figures 1-5) as PNG and EPS, and
+# those are COMMITTED, not ignored, so a reader can download one without
+# running anything. `make figures` rebuilds them from data/ and should leave
+# them unchanged.
+
+# The supplementary panels are not shipped rendered. `make supplementary`
+# regenerates them into figures/_out/, where they stay untracked.
+figures/_out/figS*
+
+# Working document, not part of the release.
+PLAN.md
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
