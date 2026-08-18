@@ -1,4 +1,4 @@
-# succession-paper
+# high-resolution-gut-microbiome-dynamics-during-antibiotic-perturbation
 
 Reproduction code and derived data for
 
