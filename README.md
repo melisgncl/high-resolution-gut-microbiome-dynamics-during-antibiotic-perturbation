@@ -157,7 +157,7 @@ src/succession/  the package: loading, analysis, the estimator. No plotting exce
 figures/         one script per figure. Drawing only, no analysis
 figures/_out/    Figures 1–5, every panel as PNG + EPS — committed
                  (S1–S6 regenerate here, untracked)
-pipeline/        provenance: the code that produced data/. Cannot run from a clone
+pipeline/        provenance: the code that produced data/.
 notebooks/       the walkthrough, shipped executed
 tools/           builds that notebook — it is generated, never hand-edited
 tests/           the published numbers, as assertions
