@@ -27,30 +27,6 @@ time axis allows a **time-varying community Jacobian** to be estimated — a
 matrix of who responds to whom — and its behaviour over the course of the
 succession to be measured rather than assumed.
 
-This repository holds the derived data and the code that turn it into the
-manuscript's figures and numbers. It exists so that a reader can do three things
-without contacting the authors:
-
-1. **See** the main figures without installing anything — `figures/_out/`
-   ships every panel of Figures 1–5 as PNG and EPS.
-2. **Rebuild** all 24 panels, main and supplementary, from the shipped tables
-   with a single command, and confirm that the main figures come back
-   byte-identical to what is committed.
-3. **Interrogate** the result — check a published statistic against an
-   assertion, change an analysis parameter and see which conclusions move, and
-   read, in one place, every point at which the rebuilt figures differ from the
-   ones submitted.
-
-**No raw sequencing data is required.** Raw reads and assemblies are deposited
-separately; see the manuscript's data availability statement. What ships here is
-the derived layer: 41 MB of tables, documented column by column in
-[`data/README.md`](data/README.md).
-
-`24 panels` · `41 MB derived data` · `35 tests pinning the published numbers` ·
-`Python 3.13`
-
----
-
 ## The experiment
 
 Mice were pretreated for four weeks with an antibiotic cocktail (metronidazole,
