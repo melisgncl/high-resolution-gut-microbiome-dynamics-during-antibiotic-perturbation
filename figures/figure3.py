@@ -30,9 +30,30 @@ FOCAL = "m1"
 
 
 def all_eigenvalues() -> pd.DataFrame:
-    eig = pd.concat([jacobian.eigenvalues(m) for m in COLONISED], ignore_index=True)
+    """Full spectrum, one mouse's-worth at a time — panel A's complex plane.
+
+    Sliding-window (``all_eigenvalues_sliding``), not the stored expanding-window
+    matrices: rank no longer tracks time. See CORRECTIONS.md.
+    """
+    eig = pd.concat([jacobian.all_eigenvalues_sliding(m, WINDOW) for m in COLONISED],
+                    ignore_index=True)
     eig["day"] = to_days(eig["index"].to_numpy(), group="colonised")
     return eig
+
+
+def dominant_eigenvalues() -> pd.DataFrame:
+    """One Re(lambda_max) per window per mouse — panel B's trend.
+
+    Not the same table as ``all_eigenvalues``: that one is pseudoreplicated
+    (windows x species) and is for the panel-A visual only. This is the
+    corrected counterpart of the published Figure 3B statistic. See
+    ``jacobian.dominant_eigenvalue`` and ``CORRECTIONS.md``.
+    """
+    dom = pd.concat([jacobian.dominant_eigenvalue(m, WINDOW) for m in COLONISED],
+                    ignore_index=True)
+    dom["day"] = to_days(dom["index"].to_numpy(), group="colonised")
+    dom = dom.rename(columns={"re_max": "re", "im_max": "im"})
+    return dom
 
 
 # ── A ────────────────────────────────────────────────────────────────────────
@@ -71,8 +92,13 @@ def panel_a(eig):
 
 # ── B ────────────────────────────────────────────────────────────────────────
 def panel_b(eig):
+    """``eig`` is ``dominant_eigenvalues()`` — one Re(lambda_max) per window per
+    mouse, not the full spectrum. Plotting the full spectrum here would
+    pseudoreplicate the trend statistic; see the docstring on that function."""
     rho, p, n = stats.spearman(eig["day"], eig["re"])
-    print(f"  Re(lambda) vs time: rho = {rho:.3f}  P = {p:.2e}  n = {n}")
+    print(f"  Re(lambda_max) vs time [dominant, sliding window {WINDOW}]: "
+          f"rho = {rho:.3f}  P = {p:.2e}  n = {n}   "
+          f"(published: rho = -0.43, n = 1545, confounded + pseudoreplicated)")
     mean_onset = anchors.table()["onset_day"].mean()
 
     fig, ax = plt.subplots(figsize=(7.2, 4.6))
@@ -84,18 +110,23 @@ def panel_b(eig):
         d = eig[eig["mouse"] == m]
         ax.scatter(d["day"], d["re"], s=6, color=MOUSE_COLORS_TAB[m], label=m,
                    alpha=0.85, lw=0, zorder=3)
-    # A handful of eigenvalues reach -9; the published panel views only the bulk.
-    # Clipping the view leaves the correlation, computed above on all n, intact.
-    ax.set_ylim(-1.0, 0.45)
-    ax.text(0.62, 0.93, f"Spearman $\\rho$ = {rho:.2f}\nP = {p:.2e}",
+    # The dominant eigenvalue only, not the full spectrum, so the range is
+    # narrower than the old panel and does not need clipping.
+    lo, hi = float(eig["re"].min()), float(eig["re"].max())
+    pad = 0.06 * (hi - lo)
+    ax.set_ylim(lo - pad, hi + pad)
+    ax.text(0.62, 0.93, f"Spearman $\\rho$ = {rho:.2f}\nP = {p:.2e}\nn = {n}",
             transform=ax.transAxes, fontsize=8, va="top")
+    frac_pos = float((eig["re"] > 0).mean())
+    ax.text(0.62, 0.72, f"Re($\\lambda_{{max}}$) > 0\nat {100*frac_pos:.0f}% of windows",
+            transform=ax.transAxes, fontsize=7.5, va="top", color="#cc2222")
     ax.text(0.01, 0.97, "Unstable", transform=ax.transAxes, color="#cc2222",
             fontsize=7.5, va="top")
     ax.text(0.01, 0.04, "Stable", transform=ax.transAxes, color="#336633",
             fontsize=7.5)
     ax.set_xlabel("Time (days post-colonisation)")
-    ax.set_ylabel(r"Re($\lambda$)")
-    ax.set_title(r"B   Time vs Re($\lambda$) — all eigenvalues, all mice")
+    ax.set_ylabel(r"Re($\lambda_{max}$)")
+    ax.set_title(r"B   Time vs Re($\lambda_{max}$) — dominant eigenvalue, one per window")
     # A tick at every sampling day, labelled every other one.
     day_tick_marks(ax, eig["day"].to_numpy(), label_every=2)
     ax.legend(ncol=1, fontsize=7, loc="upper left", bbox_to_anchor=(1.02, 1.0),
@@ -197,7 +228,6 @@ def panels_cd():
 
 if __name__ == "__main__":
     print("Figure 3")
-    eig = all_eigenvalues()
-    panel_a(eig)
-    panel_b(eig)
+    panel_a(all_eigenvalues())          # full spectrum, panel A's complex plane
+    panel_b(dominant_eigenvalues())     # one Re(lambda_max) per window, panel B's trend
     panels_cd()

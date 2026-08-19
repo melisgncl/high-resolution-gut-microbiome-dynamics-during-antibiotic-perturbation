@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from _common import (COLONISED, diversity, jacobian, match_nearest, stats,
-                     style, to_days, WINDOW)
+                     style, to_days, WINDOW, WINDOW_ROBUSTNESS)
 
 style.apply()
 
@@ -54,12 +54,21 @@ def main():
     for _, r in sweep.iterrows():
         ax.annotate(f"n={int(r['n'])}", (r["window"], r["rho"]),
                     textcoords="offset points", xytext=(0, 8), ha="center", fontsize=6)
-    ax.axvline(WINDOW, color="#C0392B", ls="--", lw=1.0, label=f"primary window ({WINDOW})")
+    ax.axvline(WINDOW, color="#C0392B", ls="-", lw=1.2, zorder=0,
+               label=f"primary window ({WINDOW}) — Fig. 2C, Fig. 3, Fig. 4")
+    ax.axvline(WINDOW_ROBUSTNESS, color="#7F7F7F", ls="--", lw=0.9, zorder=0,
+               label=f"robustness check ({WINDOW_ROBUSTNESS}) — this figure only")
+    for w in sweep["window"]:
+        nsig = int(sweep.loc[sweep["window"] == w, "n_sig"].iloc[0])
+        ax.annotate(f"{nsig}/8", (w, sweep.loc[sweep["window"] == w, "rho"].iloc[0]),
+                    textcoords="offset points", xytext=(0, -16), ha="center",
+                    fontsize=6.5, color="#333", zorder=5,
+                    bbox=dict(fc="white", ec="none", pad=0.5, alpha=.95))
     ax.set_xticks(range(1, 11))
     ax.set_xlabel("Sliding-window width (sampling slots)")
     ax.set_ylabel(r"Pooled Spearman $\rho$")
-    ax.set_title("A   Correlation across window widths")
-    ax.legend(fontsize=7)
+    ax.set_title("A   Correlation across window widths, with per-mouse significance")
+    ax.legend(fontsize=6.5)
 
     p = points_at(WINDOW)
     sc = None
@@ -71,7 +80,7 @@ def main():
     cb.set_label("Day post-colonisation")
     ax2.set_xlabel("16S Hill $^1D$")
     ax2.set_ylabel("Mean negative $J_{ij}$")
-    ax2.set_title(f"B   All mice pooled, window = {WINDOW}")
+    ax2.set_title(f"B   All mice pooled, primary window = {WINDOW}")
     fig.tight_layout()
     return style.save(fig, "figS4_window_sweep")
 
