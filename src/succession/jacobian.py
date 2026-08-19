@@ -288,10 +288,172 @@ def summarise(offdiag: dict[float, np.ndarray]) -> "pd.DataFrame":  # noqa: F821
     return pd.DataFrame(rows)
 
 
+
+def full(
+    state: State,
+    times,
+    window: int = WINDOW,
+) -> dict[float, np.ndarray]:
+    """The complete n x n Jacobian at each evaluation time, diagonal included.
+
+    ``offdiagonal`` drops the diagonal because Figure 2C is about interactions
+    between taxa. Eigenvalues are a different question: J[i <- i] carries the
+    self-regulation term that sets where the spectrum sits, and omitting it
+    moves every eigenvalue. Use this function, not ``offdiagonal``, for anything
+    spectral.
+
+    Pairs failing the ``_STD_FLOOR`` guard are set to 0.0 rather than dropped -
+    a matrix cannot have holes. Zero is the honest fill: no detectable response.
+    """
+    step = state.grid[1] - state.grid[0]
+    dZ = np.gradient(state.Z, step, axis=0)
+    n = state.Z.shape[1]
+
+    out: dict[float, np.ndarray] = {}
+    for t in np.atleast_1d(times):
+        sl = _window_slice(state.grid, float(t), window)
+        if sl is None:
+            continue
+        lo, hi = sl
+        zw, dw = state.Z[lo:hi + 1], dZ[lo:hi + 1]
+        sd_z, sd_d = zw.std(axis=0), dw.std(axis=0)
+        J = np.zeros((n, n))
+        for i in range(n):
+            if sd_d[i] < _STD_FLOOR:
+                continue
+            for j in range(n):
+                if sd_z[j] >= _STD_FLOOR:
+                    J[i, j] = np.cov(dw[:, i], zw[:, j])[0, 1]
+        if np.isfinite(J).all():
+            out[float(t)] = J
+    return out
+
+
+def corr(
+    state: State,
+    times,
+    window: int = WINDOW,
+) -> dict[float, np.ndarray]:
+    """Scale-free interaction matrix - the amplitude-free counterpart of J.
+
+        R[i <- j] = cov(dz_i/dt, z_j) / ( sd(dz_i/dt) sd(z_j) )
+
+    Why this exists: ``cov(dz_i/dt, z_j)`` estimates A*C, the interaction matrix
+    times the state covariance, not A alone. As succession proceeds the
+    trajectories flatten, C shrinks, and |J| shrinks with it even if A never
+    changes. R divides the amplitude out and is a Pearson correlation, bounded
+    in [-1, 1] and invariant to rescaling either series.
+
+    This is not cosmetic. Against TIME, mean |J| gives rho = -0.892 (window 5,
+    n = 113, 8/8 mice) while mean |R| gives rho = +0.152, p = 0.11, significant
+    in 2/8 mice with opposite signs. Against DIVERSITY the picture differs: the
+    prevalence statistic ``frac_positive`` survives at every window tested,
+    while mean |R| flips sign between window 5 and window 10. See
+    ``CORRECTIONS.md``.
+
+    Diagonal entries are NaN: a self term is not an interaction.
+    """
+    step = state.grid[1] - state.grid[0]
+    dZ = np.gradient(state.Z, step, axis=0)
+    n = state.Z.shape[1]
+
+    out: dict[float, np.ndarray] = {}
+    for t in np.atleast_1d(times):
+        sl = _window_slice(state.grid, float(t), window)
+        if sl is None:
+            continue
+        lo, hi = sl
+        zw, dw = state.Z[lo:hi + 1], dZ[lo:hi + 1]
+        sd_z, sd_d = zw.std(axis=0, ddof=1), dw.std(axis=0, ddof=1)
+        R = np.full((n, n), np.nan)
+        for i in range(n):
+            if sd_d[i] < _STD_FLOOR:
+                continue
+            for j in range(n):
+                if i != j and sd_z[j] >= _STD_FLOOR:
+                    R[i, j] = (np.cov(dw[:, i], zw[:, j])[0, 1]
+                               / (sd_d[i] * sd_z[j]))
+        out[float(t)] = R
+    return out
+
+
+def summarise_corr(corrmats: dict[float, np.ndarray]) -> "pd.DataFrame":  # noqa: F821
+    """Per-time summaries of a scale-free matrix, mirroring ``summarise``.
+
+    ``frac_positive`` is the statistic that survives every robustness check:
+    it rises with diversity in all four (cohort, window) configurations tested,
+    and it is what licenses the claim that inhibitory links become less
+    PREVALENT. ``mean_absolute`` is the magnitude claim's amplitude-free test,
+    and it does not survive - see the module docstring of ``corr``.
+    """
+    import pandas as pd
+
+    rows = []
+    for t, R in sorted(corrmats.items()):
+        v = R[np.isfinite(R)]
+        if v.size == 0:
+            continue
+        neg = v[v < 0]
+        rows.append({
+            "index": t,
+            "n_pairs": v.size,
+            "mean": float(v.mean()),
+            "mean_absolute": float(np.abs(v).mean()),
+            "mean_negative": float(neg.mean()) if neg.size else np.nan,
+            "frac_positive": float((v > 0).mean()),
+        })
+    return pd.DataFrame(rows)
+
+
+def effective_rank(J: np.ndarray, tol: float = 1e-10) -> int:
+    """Number of singular values above ``tol``.
+
+    Diagnostic for the confound in ``eigenvalues``: a covariance estimator has
+    rank <= samples in window, so under an EXPANDING window rank is a
+    deterministic function of time and the null-space zeros sit at Re(lambda) = 0,
+    above the mostly-negative real spectrum. Under the sliding window used by
+    ``full`` the rank is constant and this diagnostic should be flat.
+    """
+    return int((np.linalg.svd(J, compute_uv=False) > tol).sum())
+
+
+def dominant_eigenvalue(mouse: str, window: int = WINDOW) -> "pd.DataFrame":  # noqa: F821
+    """Re(lambda_max) per time point, from sliding-window matrices.
+
+    The corrected counterpart of ``eigenvalues``. Two differences, each of which
+    moves the published number:
+
+    * matrices come from ``full`` (sliding window) rather than from the stored
+      expanding-window files, so matrix rank no longer tracks time;
+    * one row per time point, not one per eigenvalue, so a mouse contributes
+      its number of windows rather than windows x species to any correlation.
+
+    The published Figure 3B trend (rho = -0.43, n = 1545) is both confounded and
+    pseudoreplicated. See ``CORRECTIONS.md``.
+    """
+    import pandas as pd
+
+    state = build_state(mouse)
+    times = evaluation_times(mouse, state, window=window)
+    rows = []
+    for t, J in sorted(full(state, times, window).items()):
+        lam = np.linalg.eigvals(J)
+        k = int(np.argmax(lam.real))
+        rows.append({"mouse": mouse, "index": t,
+                     "re_max": float(lam[k].real), "im_max": float(lam[k].imag),
+                     "rank": effective_rank(J), "n_species": J.shape[0]})
+    return pd.DataFrame(rows)
+
+
 def eigenvalues(mouse: str) -> "pd.DataFrame":  # noqa: F821
     """Eigenvalues of every stored per-window Jacobian.
 
     The community is locally stable where every Re(lambda) < 0.
+
+    RETAINED FOR PROVENANCE. This reads the stored matrices in ``data/jacobian``,
+    which were estimated with an EXPANDING window, and returns one row per
+    eigenvalue. Both properties affect the published Figure 3B trend. Use
+    ``dominant_eigenvalue`` for new analysis; see ``CORRECTIONS.md``.
     """
     import pandas as pd
 

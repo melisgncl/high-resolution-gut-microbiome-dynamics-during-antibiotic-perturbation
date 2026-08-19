@@ -1,0 +1,128 @@
+"""The corrected statistics. See CORRECTIONS.md.
+
+`test_reproduces_published.py` pins what was submitted, so the manuscript stays
+reproducible. This file pins what is *true*. Where the two disagree, CORRECTIONS.md
+says why. A change that breaks a test here is wrong; a change that breaks one there
+is a change to the published path and needs the same scrutiny.
+"""
+
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from succession import jacobian, stats                          # noqa: E402
+from succession.config import COLONISED                         # noqa: E402
+from succession.timeaxis import to_days                         # noqa: E402
+
+
+def _against_time(window):
+    days, absJ, absR, fpos = [], [], [], []
+    for m in COLONISED:
+        st = jacobian.build_state(m)
+        ts = jacobian.evaluation_times(m, st, window=window)
+        Jm, Rm = jacobian.full(st, ts, window), jacobian.corr(st, ts, window)
+        for t in sorted(set(Jm) & set(Rm)):
+            J, R = Jm[t], Rm[t]
+            off = ~np.eye(J.shape[0], dtype=bool)
+            v = R[np.isfinite(R)]
+            days.append(to_days(t, group="colonised"))
+            absJ.append(np.abs(J[off]).mean())
+            absR.append(np.abs(v).mean())
+            fpos.append((v > 0).mean())
+    return np.array(days), np.array(absJ), np.array(absR), np.array(fpos)
+
+
+# ── CORRECTIONS.md #3 — the ninefold decline is amplitude ────────────────────
+
+@pytest.mark.parametrize("window,n,rho_J", [(5, 113, -0.892), (10, 73, -0.842)])
+def test_raw_magnitude_declines(window, n, rho_J):
+    """mean |J| falls steeply against time. This is the published behaviour."""
+    d, aJ, _, _ = _against_time(window)
+    r, p, k = stats.spearman(d, aJ)
+    assert k == n
+    assert r == pytest.approx(rho_J, abs=0.01)
+
+
+@pytest.mark.parametrize("window", [5, 10])
+def test_amplitude_free_magnitude_is_flat(window):
+    """mean |R| does not decline. The ninefold weakening is the amplitude term."""
+    d, _, aR, _ = _against_time(window)
+    r, p, _ = stats.spearman(d, aR)
+    assert p > 0.05, f"window {window}: expected no trend, got rho={r:+.3f} p={p:.3g}"
+    assert abs(r) < 0.25
+
+
+# ── CORRECTIONS.md #4 — prevalence shifts, and stops at symmetry ─────────────
+
+@pytest.mark.parametrize("window,rho", [(5, 0.292), (10, 0.426)])
+def test_inhibitory_links_become_less_prevalent(window, rho):
+    """frac(R>0) rises against time - the one amplitude-free trend that holds."""
+    d, _, _, f = _against_time(window)
+    r, p, _ = stats.spearman(d, f)
+    assert r == pytest.approx(rho, abs=0.02)
+    assert p < 0.01
+
+
+@pytest.mark.parametrize("window", [5, 10])
+def test_sign_composition_stops_at_symmetry(window):
+    """It never becomes facilitation-dominated. Late mean stays at or below 0.5."""
+    d, _, _, f = _against_time(window)
+    late = f[d >= np.percentile(d, 75)]
+    assert late.mean() <= 0.52, f"window {window}: late frac(R>0) = {late.mean():.3f}"
+
+
+# ── CORRECTIONS.md #2 — the rank confound is gone under a sliding window ─────
+
+@pytest.mark.parametrize("window", [5, 10])
+def test_rank_no_longer_tracks_time(window):
+    """The confound in the stored matrices: rank = min(window, S), so rank ~ time."""
+    dom = pd.concat([jacobian.dominant_eigenvalue(m, window=window)
+                     for m in COLONISED])
+    d = to_days(dom["index"].to_numpy(), group="colonised")
+    r, p, _ = stats.spearman(d, dom["rank"].to_numpy())
+    assert p > 0.05, f"window {window}: rank still tracks time, rho={r:+.3f}"
+
+
+@pytest.mark.parametrize("window,n,rho", [(5, 113, -0.690), (10, 73, -0.813)])
+def test_dominant_eigenvalue_trend(window, n, rho):
+    """One eigenvalue per window, sliding window. Replaces rho = -0.43, n = 1545."""
+    dom = pd.concat([jacobian.dominant_eigenvalue(m, window=window)
+                     for m in COLONISED])
+    d = to_days(dom["index"].to_numpy(), group="colonised")
+    r, p, k = stats.spearman(d, dom["re_max"].to_numpy())
+    assert k == n
+    assert r == pytest.approx(rho, abs=0.01)
+
+
+@pytest.mark.parametrize("window", [5, 10])
+def test_eigenvalue_never_crosses_zero(window):
+    """It declines without reaching stability. Do not write 'the community stabilises'."""
+    dom = pd.concat([jacobian.dominant_eigenvalue(m, window=window)
+                     for m in COLONISED])
+    assert (dom["re_max"] > 0).mean() >= 0.99
+
+
+# ── CORRECTIONS.md #5 — control Paenibacillaceae is present, not absent ──────
+
+def test_control_paenibacillaceae_is_present_and_never_blooms():
+    """It was filtered out by `mean < 0.005`, then read downstream as zero."""
+    import csv
+    from succession.config import CONTROLS, DATA
+
+    for m in CONTROLS:
+        by_t = {}
+        with open(DATA / "16s" / "family" / f"{m}_family.csv") as fh:
+            for row in csv.DictReader(fh):
+                if row["Family"] == "Paenibacillaceae":
+                    t = float(row["Time"])
+                    by_t[t] = by_t.get(t, 0.0) + float(row["Abundance.family"])
+        v = np.array(list(by_t.values()))
+        assert v.size > 0, f"{m}: Paenibacillaceae absent from the unfiltered table"
+        assert v.max() > 0.0, f"{m}: detected nowhere"
+        assert v.max() < 0.05, f"{m}: unexpected bloom, max = {v.max():.4f}"
+        assert v.mean() < 0.005, f"{m}: mean {v.mean():.4f} - above the filter that removed it"
