@@ -1,4 +1,19 @@
-"""Figure 4C, rebuilt — the colonizer-resident interaction, matched across arms.
+"""RETIRED (19 Aug 2026) — not part of Figure 4 or the paper.
+
+Adrian's call: real result (sign reversal, dimension-matched, amplitude-free),
+but tangential to what Figure 4 needs to establish. The paper's actual claim -
+no Paenibacillaceae bloom without E. coli colonisation - needs none of the
+machinery below; see `figure4.py::panel_c` for the replacement, which uses
+peak per-mouse abundance directly (Mann-Whitney U = 0, P = 0.004, complete
+separation).
+
+Kept for provenance of the amplitude/noise-mechanism finding referenced in
+CORRECTIONS.md ss3-4 and tested in tests/test_current.py - not run by
+run_all.py or the Makefile, and does not produce a manuscript figure.
+
+Original module docstring follows.
+
+Figure 4C, rebuilt — the colonizer-resident interaction, matched across arms.
 
 Why the published panel could not simply be re-run
 --------------------------------------------------
@@ -40,7 +55,7 @@ Caveat stated on the figure: "Enterobacteriaceae" is a native population in the
 controls and the gavaged K12 in the colonised mice. This compares community
 contexts, not the same organism.
 
-Run:  python figures/figure4c_rebuilt.py
+Run:  python figures/figure4c_retired_amplitude_analysis.py   (provenance only)
 """
 
 from __future__ import annotations
@@ -219,7 +234,7 @@ def main():
              "“Enterobacteriaceae” is a native population in controls and the gavaged K12 in colonised mice.",
              ha="center", fontsize=8, color="#555")
     fig.tight_layout()
-    out = style.save(fig, "fig4C_rebuilt")
+    out = style.save(fig, "_retired_fig4C_amplitude_analysis")
     print("Rebuilt Figure 4C")
     for lab, col in (("R[Paeni<-Entero]", 3), ("R[Entero<-Paeni]", 4)):
         a, b = _pool(data, CONTROLS, col, 1, 16), _pool(data, COLONISED, col, 1, 16)

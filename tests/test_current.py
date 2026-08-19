@@ -231,12 +231,12 @@ def test_paenibacillaceae_noise_drives_control_amplitude():
 
     Not general trajectory flattening - specifically Paenibacillaceae's own
     noise in the control arm, where it sits at ~1% with only 7-10 samples
-    (the 16S low-count regime). See CORRECTIONS.md and figure4c_rebuilt.py.
+    (the 16S low-count regime). See CORRECTIONS.md and figure4c_retired_amplitude_analysis.py (not part of the paper).
     """
     import sys
     from pathlib import Path
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "figures"))
-    from figure4c_rebuilt import PAIR, WIN_DAYS, state
+    from figure4c_retired_amplitude_analysis import PAIR, WIN_DAYS, state
     from succession.config import CONTROLS, COLONISED
 
     def per_family_sdd(mice):
@@ -272,3 +272,27 @@ def test_paenibacillaceae_noise_drives_control_amplitude():
     assert ctl["Paenibacillaceae"] > 3 * ctl["Enterobacteriaceae"]
     assert ctl["Paenibacillaceae"] == max(ctl["Paenibacillaceae"], ctl["Enterobacteriaceae"],
                                           col["Paenibacillaceae"], col["Enterobacteriaceae"])
+
+
+# ── Figure 4C replaced, 19 Aug 2026 ───────────────────────────────────────────
+def test_figure4c_no_bloom_without_colonisation():
+    """The actual claim of Figure 4, pinned directly - no window, no Jacobian.
+
+    Peak Paenibacillaceae abundance per mouse (one value per biological
+    replicate), controls vs colonised: complete separation.
+    """
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "figures"))
+    from figure4 import _paeni_series
+    from succession.config import CONTROLS, COLONISED
+
+    ctl_max = [np.max(_paeni_series(m)[1]) for m in CONTROLS]
+    col_max = [np.max(_paeni_series(m)[1]) for m in COLONISED]
+
+    assert max(ctl_max) < 2.0     # percent - no control mouse exceeds 2%
+    assert min(col_max) > 45.0    # percent - no colonised mouse stays below 45%
+
+    U, p = stats.mann_whitney(np.array(ctl_max), np.array(col_max), alternative="two-sided")
+    assert U == 0
+    assert p == pytest.approx(0.00404, abs=0.0005)

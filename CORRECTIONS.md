@@ -8,7 +8,7 @@ still yields the published number**, so the manuscript stays reproducible.
 
 | # | published | corrected | where |
 |---|---|---|---|
-| 1 | Fig. 4C one-sided **P = 0.019** | not significant; **rebuilt** as a sign reversal | `figures/figure4c_rebuilt.py` |
+| 1 | Fig. 4C one-sided **P = 0.019** | interaction comparison **retired**; replaced by peak-abundance comparison | `figure4.py::panel_c` |
 | 2 | Fig. 3B **rho = -0.43, n = 1545** | **rho = -0.690 (w5) / -0.813 (w10), n = 113 / 73** | `jacobian.dominant_eigenvalue` |
 | 3 | "ninefold weakening of interactions" | amplitude, not interaction structure | `jacobian.corr` |
 | 3b | Fig. 2C at a single window | holds; amplitude-free counterpart needs win >= 9 | `jacobian.summarise_corr` |
@@ -16,7 +16,31 @@ still yields the published number**, so the manuscript stays reproducible.
 
 ---
 
-## 1. Figure 4C — P = 0.019 does not survive
+## 1. Figure 4C — retired, replaced (19 Aug 2026)
+
+**Current state: panel C no longer compares interaction matrices at all.** Adrian's
+call: the dimension-matched, amplitude-free sign-reversal result below is real, but
+tangential to what Figure 4 needs to establish. The paper's actual claim - no
+Paenibacillaceae bloom without E. coli colonisation - is a peak-abundance comparison,
+not an interaction comparison, and needs none of the machinery below:
+
+    peak Paenibacillaceae per mouse (%):
+      controls    1.37, 1.04, 0.36, 0.97          (n=4, max 1.37%)
+      colonised   54.5, 59.5, 53.5, 54.6, 61.6, 65.7, 62.6, 67.0   (n=8, min 53.5%)
+      Mann-Whitney U = 0, two-sided P = 0.00404 - complete separation
+
+No window, no clock issue, no dimension mismatch, no amplitude normalisation. Pinned
+in `tests/test_figure4c_no_bloom_without_colonisation`. This is now `figure4.py::panel_c`.
+
+**Everything below this point is retained for provenance only** - the interaction-level
+analysis that led to the retired panel, moved to
+`figures/figure4c_retired_amplitude_analysis.py` (not run by `run_all.py` or the
+Makefile, produces no manuscript figure). The clock and dimension diagnoses remain
+useful background for anyone re-deriving this; the amplitude/noise mechanism in
+section 3 of that file's docstring is the same finding pinned in
+`test_paenibacillaceae_noise_drives_control_amplitude`.
+
+### Original entry: P = 0.019 does not survive
 
 The comparison window was defined relative to the control span while the axis was
 converted with the wrong clock, which silently narrowed the test to 1-7 d. Both clocks
