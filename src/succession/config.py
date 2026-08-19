@@ -26,7 +26,29 @@ def group_of(mouse: str) -> str:
 # succession.jacobian, not hard-coded, so a reader can see what they do.
 
 WINDOW = 5
-"""Sliding-window width in sampling slots. The published main figures use 5."""
+"""Sliding-window width in sampling slots. The originally published main
+figures used 5. Kept as-is: `tests/test_reproduces_published.py` imports this
+name directly, so changing it would silently break the frozen reproduction of
+the submitted numbers. `figure4c_rebuilt.py` also needs a *short*, day-scaled
+window on structural grounds (see WINDOW_PRIMARY) and keeps its own constant."""
+
+WINDOW_PRIMARY = 10
+"""Sliding-window width for the colonised-mice figures going forward (Fig. 2C,
+Fig. 3), chosen after the amplitude-free robustness check in CORRECTIONS.md.
+
+Consequence accepted knowingly: Fig. 2C's per-mouse panel drops from 7/8 mice
+significant (window 5) to 4/8 at window 10. The split is systematic, not
+scattered noise - cohort 1 (m1-m4) is intact or improved at every window
+tested (all P < 0.005), cohort 2 (m5-m8) loses significance uniformly, driven
+by fewer post-warm-up evaluations (n=8-10 vs 15) and a later Paenibacillaceae
+onset eating a larger share of the pre-onset range. State this explicitly
+wherever the per-mouse count is quoted; do not report "8/8" or drop the
+per-mouse panel silently.
+
+NOT usable for Figure 4: the control clock is DAYS (the series spans 1-10 d),
+so a window of 10 leaves at most one evaluation per control mouse. Figure 4
+keeps its own short, day-scaled window - see figure4c_rebuilt.WIN_DAYS.
+"""
 
 PSEUDOCOUNT = 1e-4
 """Added to relative abundance before log10 when building the state matrix.

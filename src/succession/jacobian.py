@@ -417,6 +417,29 @@ def effective_rank(J: np.ndarray, tol: float = 1e-10) -> int:
     return int((np.linalg.svd(J, compute_uv=False) > tol).sum())
 
 
+def all_eigenvalues_sliding(mouse: str, window: int = WINDOW) -> "pd.DataFrame":  # noqa: F821
+    """Every eigenvalue of every sliding-window matrix - the spectrum view.
+
+    Same fix as ``dominant_eigenvalue`` (sliding window, rank no longer tracks
+    time) but keeps the full spectrum per matrix rather than just Re(lambda_max),
+    for panels that plot the complex plane rather than a single trend. Do not
+    correlate this against time without accounting for pseudoreplication - use
+    ``dominant_eigenvalue`` for that. See ``CORRECTIONS.md``.
+    """
+    import pandas as pd
+
+    state = build_state(mouse)
+    times = evaluation_times(mouse, state, window=window)
+    span = float(times.max() - times.min()) + 1e-9 if len(times) else 1.0
+    t0 = float(times.min()) if len(times) else 0.0
+    rows = []
+    for t, J in sorted(full(state, times, window).items()):
+        for lam in np.linalg.eigvals(J):
+            rows.append({"mouse": mouse, "index": t, "relative_time": (t - t0) / span,
+                         "re": lam.real, "im": lam.imag})
+    return pd.DataFrame(rows)
+
+
 def dominant_eigenvalue(mouse: str, window: int = WINDOW) -> "pd.DataFrame":  # noqa: F821
     """Re(lambda_max) per time point, from sliding-window matrices.
 

@@ -142,6 +142,42 @@ that diversity here is close to a relabelled time axis - it is flat at 1.0 until
 Paenibacillaceae onset then plateaus near 2.1 - so the diversity and time analyses are
 largely the same result seen twice.
 
+## 4b. Decision — primary window set to 10 (19 Aug 2026)
+
+Adrian's call, after the amplitude-free robustness check in section 4 above: Fig. 3's
+Re(lambda_max) trend is materially stronger at window 10 (rho = -0.813 vs -0.690 at
+window 5), and the scale-free statistic only stabilises from window >= 9. `mean
+negative J` remains the primary statistic (raw J is retained in the main figures;
+scale-free R moves to the supplement as a robustness check, not a replacement -
+there is precedent for covariance-based interaction matrices in the ecology
+literature, and J = A*Sigma is itself a legitimate dynamical object).
+
+`config.WINDOW_PRIMARY = 10` now drives Fig. 2C and Fig. 3. `config.WINDOW = 5` is
+unchanged and still drives `test_reproduces_published.py` (import-frozen, so
+changing it would silently break the reproduction of the submitted numbers) and
+Figure 4, which cannot use window 10 on structural grounds - the control clock is
+DAYS and the control series spans only 1-10 d, so a 10-slot window leaves at most
+one evaluation per control mouse (`test_figure4_cannot_use_primary_window`).
+
+**Cost accepted knowingly:** Fig. 2C's per-mouse panel drops from 7/8 mice
+significant (window 5) to 4/8 (window 10). Not scattered noise - a cohort split:
+
+| | window 5 | window 10 |
+|---|---|---|
+| cohort 1 (m1-m4) | all P < 2e-3 | all P < 5e-3, m4 improves to P = 9.3e-8 |
+| cohort 2 (m5-m8) | 3/4 significant | **0/4** significant |
+
+Driven by fewer post-warm-up evaluations in cohort 2 (n = 8-10 vs 15 in cohort 1)
+and a later Paenibacillaceae onset eating a larger share of the pre-onset range.
+Pinned in `tests/test_figure2c_per_mouse_cohort_split_at_primary_window`. State the
+split explicitly in the figure (now done - see the per-mouse panel) and in the
+text; do not report "8/8 mice" or drop the per-mouse panel silently.
+
+Fig. 3 panels A/B were also switched from the confounded, pseudoreplicated
+`jacobian.eigenvalues()` to `jacobian.all_eigenvalues_sliding()` (panel A, full
+spectrum, visual only) and `jacobian.dominant_eigenvalue()` (panel B, one point
+per window, the actual trend statistic - rho = -0.813, n = 73, matches section 2 above).
+
 ## 5. Control Paenibacillaceae was filtered, not absent
 
 Derived tables elsewhere dropped control families with `mean relative abundance < 0.005`.

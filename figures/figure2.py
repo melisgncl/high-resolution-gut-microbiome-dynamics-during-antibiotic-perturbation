@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from succession import anchors, diversity, io, jacobian, stats, style   # noqa: E402
 from succession.config import (BARCODE_3H_EMPTY, COHORT_1, COLONISED,    # noqa: E402
-                               MOUSE_COLORS, WINDOW)
+                               MOUSE_COLORS, WINDOW_PRIMARY as WINDOW)
 from succession.timeaxis import match_nearest, to_days                   # noqa: E402
 
 style.apply()
@@ -238,7 +238,8 @@ def panel_c():
     axl.legend(ncol=2, fontsize=6.5, loc="lower right")
 
     vals = [per[m][0] for m in COLONISED]
-    axr.bar(range(8), vals, color="#7F7F7F", edgecolor="black", lw=0.5, width=0.62)
+    bar_colors = ["#5D6D7E" if m in COHORT_1 else "#AEB6BF" for m in COLONISED]
+    axr.bar(range(8), vals, color=bar_colors, edgecolor="black", lw=0.5, width=0.62)
     for i, m in enumerate(COLONISED):
         r_, p_, n_ = per[m]
         axr.text(i, r_ + 0.03, f"P = {p_:.1e}\nn = {n_}", ha="center",
@@ -247,7 +248,15 @@ def panel_c():
     axr.set_ylim(0, 1.25)
     axr.set_xlabel("Mouse")
     axr.set_ylabel("Spearman $\\rho$")
-    axr.set_title("Per mouse")
+    n_sig = sum(v[1] < 0.05 for v in per.values())
+    axr.set_title(f"Per mouse   ({n_sig}/8 significant at window {WINDOW})")
+    axr.text(0.02, 0.98,
+             "cohort 1 (m1-m4, dark)   robust at every window tested\n"
+             "cohort 2 (m5-m8, light)  loses power at wide windows -\n"
+             "                          fewer post-warm-up evaluations\n"
+             "                          and a later Paenibacillaceae onset",
+             transform=axr.transAxes, fontsize=6, va="top", ha="left",
+             bbox=dict(fc="white", ec="0.8", alpha=.85, boxstyle="round,pad=0.25"))
     fig.suptitle("C   Inhibitory interaction versus community diversity", y=1.0)
     fig.tight_layout()
     return style.save(fig, "fig2C_inhibition_vs_diversity")

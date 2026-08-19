@@ -126,3 +126,67 @@ def test_control_paenibacillaceae_is_present_and_never_blooms():
         assert v.max() > 0.0, f"{m}: detected nowhere"
         assert v.max() < 0.05, f"{m}: unexpected bloom, max = {v.max():.4f}"
         assert v.mean() < 0.005, f"{m}: mean {v.mean():.4f} - above the filter that removed it"
+
+
+# ── primary-window decision, 19 Aug 2026 ─────────────────────────────────────
+# Fig. 2C and Fig. 3 now use WINDOW_PRIMARY = 10, not WINDOW = 5. Chosen because
+# Fig. 3's Re(lambda_max) trend is materially stronger at 10 and the amplitude-free
+# scale-free statistic only stabilises from window >= 9 (CORRECTIONS.md). The known
+# cost: Fig. 2C's per-mouse panel drops from 7/8 to 4/8 significant, split by
+# cohort rather than scattered - cohort 1 intact or improved at every window,
+# cohort 2 loses power together. Figure 4 cannot use this window: the control
+# clock is DAYS, so window 10 leaves ~1 evaluation per control mouse.
+
+def test_primary_window_is_ten():
+    from succession.config import WINDOW_PRIMARY
+    assert WINDOW_PRIMARY == 10
+
+
+def test_figure2c_per_mouse_cohort_split_at_primary_window():
+    """Cohort 1 stays significant at every mouse; cohort 2 does not.
+
+    This is the trade CORRECTIONS.md accepts in choosing WINDOW_PRIMARY = 10.
+    If this test starts failing because cohort 2 becomes significant again,
+    that is good news - update the figure caption, don't just delete the test.
+    """
+    from succession.config import COHORT_1, COHORT_2, WINDOW_PRIMARY
+
+    def per_mouse_p(mice, window):
+        out = {}
+        for m in mice:
+            st = jacobian.build_state(m)
+            ts = jacobian.evaluation_times(m, st, window=window)
+            summ = jacobian.summarise(jacobian.offdiagonal(st, ts, window))
+            from succession import diversity
+            from succession.timeaxis import match_nearest
+            q1 = diversity.hill_q1_from_taxa(m)
+            x, y = [], []
+            for _, r in summ.iterrows():
+                if not np.isfinite(r["mean_negative"]):
+                    continue
+                q = match_nearest(r["index"], q1["index"].to_numpy(), q1["q1"].to_numpy())
+                if q is None:
+                    continue
+                x.append(q); y.append(r["mean_negative"])
+            _, p, _ = stats.spearman(x, y)
+            out[m] = p
+        return out
+
+    p1 = per_mouse_p(COHORT_1, WINDOW_PRIMARY)
+    p2 = per_mouse_p(COHORT_2, WINDOW_PRIMARY)
+    assert all(p < 0.05 for p in p1.values()), f"cohort 1 should stay significant: {p1}"
+    assert sum(p < 0.05 for p in p2.values()) <= 1, f"cohort 2 should mostly lose it: {p2}"
+
+
+def test_figure4_cannot_use_primary_window():
+    """The structural reason Figure 4 keeps its own window."""
+    from succession.config import CONTROLS, WINDOW_PRIMARY
+
+    total = 0
+    for m in CONTROLS:
+        st = jacobian.build_state(m)
+        ts = jacobian.evaluation_times(m, st, window=WINDOW_PRIMARY)
+        total += len(jacobian.offdiagonal(st, ts, WINDOW_PRIMARY))
+    assert total <= 1, (
+        f"expected the control series to be exhausted at window {WINDOW_PRIMARY} "
+        f"(control index = day), got {total} usable evaluations")
