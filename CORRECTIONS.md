@@ -8,7 +8,7 @@ still yields the published number**, so the manuscript stays reproducible.
 
 | # | published | corrected | where |
 |---|---|---|---|
-| 1 | Fig. 4C one-sided **P = 0.019** | **P ~ 0.21-0.27**, not significant | `figures/figure4.py` |
+| 1 | Fig. 4C one-sided **P = 0.019** | not significant; **rebuilt** as a sign reversal | `figures/figure4c_rebuilt.py` |
 | 2 | Fig. 3B **rho = -0.43, n = 1545** | **rho = -0.690 (w5) / -0.813 (w10), n = 113 / 73** | `jacobian.dominant_eigenvalue` |
 | 3 | "ninefold weakening of interactions" | amplitude, not interaction structure | `jacobian.corr` |
 | 3b | Fig. 2C at a single window | holds; amplitude-free counterpart needs win >= 9 | `jacobian.summarise_corr` |
@@ -27,6 +27,39 @@ Controls are indexed by DAY (days 1-10), colonised by SAMPLING SLOT (1 = 3 h, 2 
 default. See `tests/test_timeaxis.py`.
 
 **This is a submitted statistic. Co-authors need to be told.**
+
+### Rebuilt — `figures/figure4c_rebuilt.py`
+
+Re-running the test was not enough; three faults had to be fixed together.
+
+**Clock.** Controls are indexed by DAY, colonised by SAMPLING SLOT. Fixed.
+
+**Dimension.** Control states carry 16S families only (4-7 variables); colonised states
+are dominated by barcode lineages (12). Mean J over matrix entries depends on dimension.
+Rebuilding from the unfiltered `data/16s/family/` tables, the shared subspace across all
+twelve mice is exactly **two families** - Enterobacteriaceae and Paenibacillaceae.
+Controls carry 17-28 families above 0.1%, colonised only 3-6: the colonizer collapses
+resident diversity, so no wider matched subspace exists. The window is also fixed at
+**5 days** in both arms rather than 5 slots, which are different real durations.
+
+**Amplitude.** Raw |J| says colonised are 0.07x controls (P = 2.2e-12); amplitude-free
+|R| says 1.40x (P = 0.041). The magnitude difference reverses under normalisation, so
+magnitude is the amplitude term - exactly what the published panel was testing.
+
+**What survives is the SIGN, and it reverses in both directions:**
+
+| | controls | colonised | P |
+|---|---|---|---|
+| R[Paeni <- Entero] | **-0.142** | **+0.265** | 2.8e-3 |
+| R[Entero <- Paeni] | **+0.303** | **-0.259** | 6.5e-6 |
+
+Significant under the overlap window (days 1-10) and the full series alike. Under
+antibiotic alone Enterobacteriaceae suppresses Paenibacillaceae; with the colonizer
+present that suppression is gone.
+
+Caveat that belongs on the figure: "Enterobacteriaceae" is a native population in the
+controls and the gavaged K12 in the colonised mice, so this compares community contexts,
+not the same organism.
 
 ## 2. Figure 3B — confounded and pseudoreplicated
 
