@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from succession import (anchors, diversity, io, jacobian, stats, style)  # noqa: E402,F401
 from succession.config import (COHORT_1, COHORT_2, COLONISED, CONTROLS,  # noqa: E402,F401
                                CLONE_COLORS, MOUSE_COLORS,
-                               MOUSE_COLORS_TAB, WINDOW, WINDOW_PRIMARY)
+                               MOUSE_COLORS_TAB, WINDOW, WINDOW_ROBUSTNESS)
 from succession.timeaxis import day_ticks, match_nearest, to_days        # noqa: E402,F401
 
 

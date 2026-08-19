@@ -22,8 +22,7 @@ import matplotlib.pyplot as plt
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from succession import anchors, io, jacobian, stats, style          # noqa: E402
-from succession.config import (COLONISED, MOUSE_COLORS_TAB,         # noqa: E402
-                               WINDOW_PRIMARY as WINDOW)
+from succession.config import COLONISED, MOUSE_COLORS_TAB, WINDOW   # noqa: E402
 from succession.timeaxis import day_tick_marks, to_days             # noqa: E402
 
 style.apply()

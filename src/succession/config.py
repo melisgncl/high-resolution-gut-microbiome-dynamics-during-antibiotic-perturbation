@@ -26,28 +26,27 @@ def group_of(mouse: str) -> str:
 # succession.jacobian, not hard-coded, so a reader can see what they do.
 
 WINDOW = 5
-"""Sliding-window width in sampling slots. The originally published main
-figures used 5. Kept as-is: `tests/test_reproduces_published.py` imports this
-name directly, so changing it would silently break the frozen reproduction of
-the submitted numbers. `figure4c_rebuilt.py` also needs a *short*, day-scaled
-window on structural grounds (see WINDOW_PRIMARY) and keeps its own constant."""
+"""Sliding-window width in sampling slots. PRIMARY for every colonised-mice
+figure (Fig. 2C, Fig. 3) as well as the originally published main figures -
+`tests/test_reproduces_published.py` imports this name directly, so it must
+keep reproducing the submitted numbers, which it does unchanged (Fig. 2C
+per-mouse: 7/8 mice significant). `figure4c_rebuilt.py` needs a short,
+day-scaled window on independent, structural grounds and keeps its own
+constant rather than importing this one."""
 
-WINDOW_PRIMARY = 10
-"""Sliding-window width for the colonised-mice figures going forward (Fig. 2C,
-Fig. 3), chosen after the amplitude-free robustness check in CORRECTIONS.md.
+WINDOW_ROBUSTNESS = 10
+"""Sliding-window width used ONLY as a robustness/supplementary check
+(`figures/supplementary/figS4_window_sweep.py`), not as a primary-figure
+window. At this width the diversity relationship strengthens for the raw
+statistic and the amplitude-free scale-free statistic stabilises (see
+CORRECTIONS.md) - useful to report, not to lead with.
 
-Consequence accepted knowingly: Fig. 2C's per-mouse panel drops from 7/8 mice
-significant (window 5) to 4/8 at window 10. The split is systematic, not
-scattered noise - cohort 1 (m1-m4) is intact or improved at every window
-tested (all P < 0.005), cohort 2 (m5-m8) loses significance uniformly, driven
-by fewer post-warm-up evaluations (n=8-10 vs 15) and a later Paenibacillaceae
-onset eating a larger share of the pre-onset range. State this explicitly
-wherever the per-mouse count is quoted; do not report "8/8" or drop the
-per-mouse panel silently.
-
-NOT usable for Figure 4: the control clock is DAYS (the series spans 1-10 d),
-so a window of 10 leaves at most one evaluation per control mouse. Figure 4
-keeps its own short, day-scaled window - see figure4c_rebuilt.WIN_DAYS.
+Do not switch a primary figure to this window without re-reading
+CORRECTIONS.md ss4b: Fig. 2C's per-mouse panel drops from 7/8 significant at
+WINDOW to 4/8 here, split by cohort rather than scattered - cohort 1 stays
+intact, cohort 2 loses power together. And it is structurally unusable for
+Figure 4: the control clock is DAYS (the series spans 1-10 d), so a window of
+10 leaves at most one evaluation per control mouse.
 """
 
 PSEUDOCOUNT = 1e-4

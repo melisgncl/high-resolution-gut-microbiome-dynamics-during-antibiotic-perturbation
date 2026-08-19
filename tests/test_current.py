@@ -128,65 +128,98 @@ def test_control_paenibacillaceae_is_present_and_never_blooms():
         assert v.mean() < 0.005, f"{m}: mean {v.mean():.4f} - above the filter that removed it"
 
 
-# ── primary-window decision, 19 Aug 2026 ─────────────────────────────────────
-# Fig. 2C and Fig. 3 now use WINDOW_PRIMARY = 10, not WINDOW = 5. Chosen because
-# Fig. 3's Re(lambda_max) trend is materially stronger at 10 and the amplitude-free
-# scale-free statistic only stabilises from window >= 9 (CORRECTIONS.md). The known
-# cost: Fig. 2C's per-mouse panel drops from 7/8 to 4/8 significant, split by
-# cohort rather than scattered - cohort 1 intact or improved at every window,
-# cohort 2 loses power together. Figure 4 cannot use this window: the control
-# clock is DAYS, so window 10 leaves ~1 evaluation per control mouse.
-
-def test_primary_window_is_ten():
-    from succession.config import WINDOW_PRIMARY
-    assert WINDOW_PRIMARY == 10
 
 
-def test_figure2c_per_mouse_cohort_split_at_primary_window():
-    """Cohort 1 stays significant at every mouse; cohort 2 does not.
+# ── window decision, 19 Aug 2026 (option B) ──────────────────────────────────
+# WINDOW = 5 stays primary for Fig. 2C and Fig. 3 - the per-mouse panel is
+# intact (7/8) at this window, and it is what test_reproduces_published.py
+# already pins. WINDOW_ROBUSTNESS = 10 is reported only as a supplementary
+# diversity-robustness check (figS4_window_sweep.py): the diversity relationship
+# strengthens there and the amplitude-free statistic stabilises there, but it is
+# not a primary-figure window. See CORRECTIONS.md ss4b.
 
-    This is the trade CORRECTIONS.md accepts in choosing WINDOW_PRIMARY = 10.
-    If this test starts failing because cohort 2 becomes significant again,
-    that is good news - update the figure caption, don't just delete the test.
-    """
-    from succession.config import COHORT_1, COHORT_2, WINDOW_PRIMARY
-
-    def per_mouse_p(mice, window):
-        out = {}
-        for m in mice:
-            st = jacobian.build_state(m)
-            ts = jacobian.evaluation_times(m, st, window=window)
-            summ = jacobian.summarise(jacobian.offdiagonal(st, ts, window))
-            from succession import diversity
-            from succession.timeaxis import match_nearest
-            q1 = diversity.hill_q1_from_taxa(m)
-            x, y = [], []
-            for _, r in summ.iterrows():
-                if not np.isfinite(r["mean_negative"]):
-                    continue
-                q = match_nearest(r["index"], q1["index"].to_numpy(), q1["q1"].to_numpy())
-                if q is None:
-                    continue
-                x.append(q); y.append(r["mean_negative"])
-            _, p, _ = stats.spearman(x, y)
-            out[m] = p
-        return out
-
-    p1 = per_mouse_p(COHORT_1, WINDOW_PRIMARY)
-    p2 = per_mouse_p(COHORT_2, WINDOW_PRIMARY)
-    assert all(p < 0.05 for p in p1.values()), f"cohort 1 should stay significant: {p1}"
-    assert sum(p < 0.05 for p in p2.values()) <= 1, f"cohort 2 should mostly lose it: {p2}"
+def test_window_is_five():
+    from succession.config import WINDOW
+    assert WINDOW == 5
 
 
-def test_figure4_cannot_use_primary_window():
-    """The structural reason Figure 4 keeps its own window."""
-    from succession.config import CONTROLS, WINDOW_PRIMARY
+def test_robustness_window_is_ten():
+    from succession.config import WINDOW_ROBUSTNESS
+    assert WINDOW_ROBUSTNESS == 10
+
+
+def test_figure2c_per_mouse_intact_at_primary_window():
+    """7/8 mice significant at the primary window - this is what ships."""
+    from succession.config import COLONISED, WINDOW
+    from succession import diversity
+    from succession.timeaxis import match_nearest
+
+    sig = 0
+    for m in COLONISED:
+        st = jacobian.build_state(m)
+        ts = jacobian.evaluation_times(m, st, window=WINDOW)
+        summ = jacobian.summarise(jacobian.offdiagonal(st, ts, WINDOW))
+        q1 = diversity.hill_q1_from_taxa(m)
+        x, y = [], []
+        for _, r in summ.iterrows():
+            if not np.isfinite(r["mean_negative"]):
+                continue
+            q = match_nearest(r["index"], q1["index"].to_numpy(), q1["q1"].to_numpy())
+            if q is None:
+                continue
+            x.append(q); y.append(r["mean_negative"])
+        _, p, _ = stats.spearman(x, y)
+        sig += p < 0.05
+    assert sig == 7, f"expected 7/8 mice significant at window {WINDOW}, got {sig}/8"
+
+
+def test_figure2c_diversity_robustness_check_at_window_ten():
+    """The supplementary check: window 10 strengthens the pooled correlation
+    even though it costs per-mouse power (documented, not hidden, in
+    figS4_window_sweep.py). This is a robustness footnote, not the headline."""
+    from succession.config import COLONISED, WINDOW_ROBUSTNESS
+    from succession import diversity
+    from succession.timeaxis import match_nearest
+
+    x, y = [], []
+    for m in COLONISED:
+        st = jacobian.build_state(m)
+        ts = jacobian.evaluation_times(m, st, window=WINDOW_ROBUSTNESS)
+        summ = jacobian.summarise(jacobian.offdiagonal(st, ts, WINDOW_ROBUSTNESS))
+        q1 = diversity.hill_q1_from_taxa(m)
+        for _, r in summ.iterrows():
+            if not np.isfinite(r["mean_negative"]):
+                continue
+            q = match_nearest(r["index"], q1["index"].to_numpy(), q1["q1"].to_numpy())
+            if q is None:
+                continue
+            x.append(q); y.append(r["mean_negative"])
+    rho, p, n = stats.spearman(x, y)
+    assert n == 73
+    assert rho == pytest.approx(0.574, abs=0.01)
+
+
+def test_figure3_dominant_eigenvalue_uses_primary_window():
+    """Fig. 3B's headline statistic, at the primary window."""
+    from succession.config import COLONISED, WINDOW
+    from succession.timeaxis import to_days
+
+    dom = pd.concat([jacobian.dominant_eigenvalue(m, window=WINDOW) for m in COLONISED])
+    d = to_days(dom["index"].to_numpy(), group="colonised")
+    rho, p, n = stats.spearman(d, dom["re_max"].to_numpy())
+    assert n == 113
+    assert rho == pytest.approx(-0.690, abs=0.01)
+
+
+def test_figure4_structurally_cannot_use_robustness_window():
+    """Why Figure 4 does not follow WINDOW_ROBUSTNESS even as a footnote."""
+    from succession.config import CONTROLS, WINDOW_ROBUSTNESS
 
     total = 0
     for m in CONTROLS:
         st = jacobian.build_state(m)
-        ts = jacobian.evaluation_times(m, st, window=WINDOW_PRIMARY)
-        total += len(jacobian.offdiagonal(st, ts, WINDOW_PRIMARY))
+        ts = jacobian.evaluation_times(m, st, window=WINDOW_ROBUSTNESS)
+        total += len(jacobian.offdiagonal(st, ts, WINDOW_ROBUSTNESS))
     assert total <= 1, (
-        f"expected the control series to be exhausted at window {WINDOW_PRIMARY} "
+        f"expected the control series to be exhausted at window {WINDOW_ROBUSTNESS} "
         f"(control index = day), got {total} usable evaluations")

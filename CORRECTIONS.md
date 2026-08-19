@@ -142,41 +142,46 @@ that diversity here is close to a relabelled time axis - it is flat at 1.0 until
 Paenibacillaceae onset then plateaus near 2.1 - so the diversity and time analyses are
 largely the same result seen twice.
 
-## 4b. Decision — primary window set to 10 (19 Aug 2026)
+## 4b. Decision — window kept at 5, window 10 reported as a robustness check (19 Aug 2026, revised)
 
-Adrian's call, after the amplitude-free robustness check in section 4 above: Fig. 3's
-Re(lambda_max) trend is materially stronger at window 10 (rho = -0.813 vs -0.690 at
-window 5), and the scale-free statistic only stabilises from window >= 9. `mean
-negative J` remains the primary statistic (raw J is retained in the main figures;
-scale-free R moves to the supplement as a robustness check, not a replacement -
-there is precedent for covariance-based interaction matrices in the ecology
-literature, and J = A*Sigma is itself a legitimate dynamical object).
+Adrian's call, and the standing one: `mean negative J` (raw, not scale-free) stays the
+primary statistic in the main figures - there is precedent for covariance-based
+interaction matrices in the ecology literature, and J = A*Sigma is itself a legitimate
+dynamical object. Scale-free R moves to the supplement as a robustness check, not a
+replacement.
 
-`config.WINDOW_PRIMARY = 10` now drives Fig. 2C and Fig. 3. `config.WINDOW = 5` is
-unchanged and still drives `test_reproduces_published.py` (import-frozen, so
-changing it would silently break the reproduction of the submitted numbers) and
-Figure 4, which cannot use window 10 on structural grounds - the control clock is
-DAYS and the control series spans only 1-10 d, so a 10-slot window leaves at most
-one evaluation per control mouse (`test_figure4_cannot_use_primary_window`).
+Within that choice, an earlier revision of this file set the *window* to 10 for Fig. 2C
+and Fig. 3, reasoning that Fig. 3's Re(lambda_max) trend is materially stronger there
+and the scale-free statistic only stabilises from window >= 9. That was reverted the
+same day: **window 5 remains primary everywhere it can be** (Fig. 2C, Fig. 3), matching
+what `tests/test_reproduces_published.py` already pins and keeping Fig. 2C's per-mouse
+panel at 7/8 mice significant rather than 4/8.
 
-**Cost accepted knowingly:** Fig. 2C's per-mouse panel drops from 7/8 mice
-significant (window 5) to 4/8 (window 10). Not scattered noise - a cohort split:
+`config.WINDOW = 5` drives Fig. 2C and Fig. 3 (and, on independent structural grounds,
+Figure 4). `config.WINDOW_ROBUSTNESS = 10` is used only by
+`figures/supplementary/figS4_window_sweep.py`, which reports the window-10 numbers as a
+supplementary check: the pooled diversity correlation is still significant there
+(rho = +0.574, P = 1.1e-7, n = 73) and strengthens for the amplitude-free statistic,
+but per-mouse power drops in a cohort-specific way - cohort 1 (m1-m4) stays intact or
+improves at every window tested, cohort 2 (m5-m8) loses significance together, driven by
+fewer post-warm-up evaluations (n=8-10 vs 15) and a later Paenibacillaceae onset eating a
+larger share of the pre-onset range. That pattern is reported in the supplementary figure
+and pinned in `tests/test_figure2c_diversity_robustness_check_at_window_ten`; it does not
+appear on the primary Fig. 2C panel, because at the primary window the split does not
+arise (only m8 misses significance, matching the originally published pattern).
 
-| | window 5 | window 10 |
-|---|---|---|
-| cohort 1 (m1-m4) | all P < 2e-3 | all P < 5e-3, m4 improves to P = 9.3e-8 |
-| cohort 2 (m5-m8) | 3/4 significant | **0/4** significant |
+Fig. 3 panels A/B were still switched from the confounded, pseudoreplicated
+`jacobian.eigenvalues()` to `jacobian.all_eigenvalues_sliding()` (panel A, full spectrum,
+visual only) and `jacobian.dominant_eigenvalue()` (panel B, one point per window) - that
+fix is independent of the window choice and stands regardless. At the primary window:
+Re(lambda_max) vs time, rho = -0.690, P = 2.9e-17, n = 113 (published: rho = -0.43,
+n = 1545, confounded and pseudoreplicated).
 
-Driven by fewer post-warm-up evaluations in cohort 2 (n = 8-10 vs 15 in cohort 1)
-and a later Paenibacillaceae onset eating a larger share of the pre-onset range.
-Pinned in `tests/test_figure2c_per_mouse_cohort_split_at_primary_window`. State the
-split explicitly in the figure (now done - see the per-mouse panel) and in the
-text; do not report "8/8 mice" or drop the per-mouse panel silently.
+Figure 4 cannot use `WINDOW_ROBUSTNESS` on structural grounds regardless of this
+decision: the control clock is DAYS and the control series spans only 1-10 d, so a
+10-slot window leaves at most one evaluation per control mouse
+(`test_figure4_structurally_cannot_use_robustness_window`).
 
-Fig. 3 panels A/B were also switched from the confounded, pseudoreplicated
-`jacobian.eigenvalues()` to `jacobian.all_eigenvalues_sliding()` (panel A, full
-spectrum, visual only) and `jacobian.dominant_eigenvalue()` (panel B, one point
-per window, the actual trend statistic - rho = -0.813, n = 73, matches section 2 above).
 
 ## 5. Control Paenibacillaceae was filtered, not absent
 
