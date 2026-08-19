@@ -19,9 +19,15 @@ Three faults, only one of which is the clock:
    collapses resident diversity, so no wider matched subspace exists.
 
 3. AMPLITUDE. mean |J| says controls are higher (0.060 vs 0.015). Amplitude-free,
-   mean |R| says the opposite (0.343 vs 0.522, P = 0.009). The magnitude
-   difference is the amplitude term. Only the SIGN survives, so that is what
-   this panel reports.
+   mean |R| says the opposite (0.343 vs 0.522, P = 0.009). Two things drive this,
+   checked directly (CORRECTIONS.md): controls are noisier than colonised mice
+   for BOTH families (fewer samples, 7-10 vs 15-19), and within either arm
+   Paenibacillaceae is far noisier than Enterobacteriaceae because it is the
+   rarer taxon (log-scale amplification of count noise at low abundance).
+   Together these make Paenibacillaceae's absolute noise in controls
+   (sd(d/dt) = 1.386) the largest number in the comparison, which inflates
+   Cov(dz/dt, z) even absent real coupling. R divides by the same noise scale
+   and cancels it. Only the SIGN survives, so that is what this panel reports.
 
 What it shows
 -------------

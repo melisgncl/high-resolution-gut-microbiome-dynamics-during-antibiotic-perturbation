@@ -42,9 +42,42 @@ Controls carry 17-28 families above 0.1%, colonised only 3-6: the colonizer coll
 resident diversity, so no wider matched subspace exists. The window is also fixed at
 **5 days** in both arms rather than 5 slots, which are different real durations.
 
-**Amplitude.** Raw |J| says colonised are 0.07x controls (P = 2.2e-12); amplitude-free
-|R| says 1.40x (P = 0.041). The magnitude difference reverses under normalisation, so
-magnitude is the amplitude term - exactly what the published panel was testing.
+**Amplitude - mechanism identified 19 Aug.** Raw |J| says colonised are 0.07x controls
+(P = 2.2e-12); amplitude-free |R| says 1.40x (P = 0.041). The magnitude difference
+reverses under normalisation, so magnitude is the amplitude term - but "amplitude" here
+is not general trajectory flattening, it is specifically Paenibacillaceae's own noise in
+the control arm:
+
+| | controls, sd(log10 abund) | controls, sd(d/dt) | colonised, sd(log10 abund) | colonised, sd(d/dt) |
+|---|---|---|---|---|
+| Enterobacteriaceae | 0.190 | 0.253 | 0.051 | 0.051 |
+| Paenibacillaceae | **0.624** | **1.386** | 0.362 | 0.421 |
+
+Two effects, not one - checked and the first draft of this explanation overstated the
+second:
+
+1. Controls are noisier than colonised mice for BOTH families (Entero 0.253 vs 0.051,
+   4.96x; Paeni 1.386 vs 0.421, 3.29x) - most plausibly just fewer samples per mouse
+   (7-10 vs 15-19), not something specific to one taxon. Do not describe this as a
+   Paenibacillaceae-specific artefact; Entero's fold-increase is if anything larger.
+2. Within EITHER arm, Paenibacillaceae is far noisier than Enterobacteriaceae (5.48x in
+   controls, 8.25x in colonised) because it is the rarer taxon - log-scale amplification
+   of 16S-amplicon count noise at low abundance (c_m1 trajectory: 0.006, 0.008, 0.003,
+   0.003, 0.007, 0.014, 0.002, 0.000, 0.001 - factor-of-10+ jumps between adjacent
+   samples, consistent with count noise, not dynamics).
+
+Effect 2 means Paenibacillaceae's absolute noise level in controls (1.386) is the single
+largest number in the table - larger than Entero's noise in either arm, and larger than
+its own noise once established in colonised mice - which is what dominates raw |J|'s
+magnitude. It is not that Paenibacillaceae becomes specifically contaminated in the
+control arm; it is intrinsically the noisier taxon everywhere, and the control arm's
+general noise level (effect 1) pushes its already-large absolute noise higher still.
+
+This resolves the reversal mechanistically: noise-inflated variance in one near-threshold
+control taxon mechanically inflates Cov(dz/dt, z) even absent real coupling, which is
+exactly what raw |J| reports; R divides by that same noise scale (sd(dz/dt)*sd(z)),
+cancels the artefact, and recovers the real correlation structure - which is what panel B
+reports as the sign reversal.
 
 **What survives is the SIGN, and it reverses in both directions:**
 

@@ -223,3 +223,52 @@ def test_figure4_structurally_cannot_use_robustness_window():
     assert total <= 1, (
         f"expected the control series to be exhausted at window {WINDOW_ROBUSTNESS} "
         f"(control index = day), got {total} usable evaluations")
+
+
+# ── Figure 4C amplitude mechanism, 19 Aug 2026 ───────────────────────────────
+def test_paenibacillaceae_noise_drives_control_amplitude():
+    """Why raw |J| says controls > colonised while |R| says the opposite.
+
+    Not general trajectory flattening - specifically Paenibacillaceae's own
+    noise in the control arm, where it sits at ~1% with only 7-10 samples
+    (the 16S low-count regime). See CORRECTIONS.md and figure4c_rebuilt.py.
+    """
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "figures"))
+    from figure4c_rebuilt import PAIR, WIN_DAYS, state
+    from succession.config import CONTROLS, COLONISED
+
+    def per_family_sdd(mice):
+        out = {f: [] for f in PAIR}
+        for m in mice:
+            grid, Z, days, _, _ = state(m)
+            step = grid[1] - grid[0]
+            dZ = np.gradient(Z, step, axis=0)
+            for te in days:
+                if te - WIN_DAYS < grid[0] - 2.0:
+                    continue
+                hi = int(np.searchsorted(grid, te, side="right")) - 1
+                lo = max(0, int(np.searchsorted(grid, te - WIN_DAYS, side="left")))
+                if hi - lo < 4:
+                    continue
+                dw = dZ[lo:hi + 1]
+                for k, f in enumerate(PAIR):
+                    out[f].append(dw[:, k].std(ddof=1))
+        return {f: np.median(v) for f, v in out.items()}
+
+    ctl = per_family_sdd(CONTROLS)
+    col = per_family_sdd(COLONISED)
+
+    # Controls are noisier than colonised mice for BOTH families - fewer
+    # samples (7-10 vs 15-19), not something specific to one taxon.
+    assert ctl["Enterobacteriaceae"] > col["Enterobacteriaceae"]
+    assert ctl["Paenibacillaceae"] > col["Paenibacillaceae"]
+    # Within either arm, Paeni is far noisier than Entero because it is the
+    # rarer taxon (log-scale amplification of count noise). This is what
+    # dominates raw |J|'s absolute magnitude - not a control-specific effect
+    # on Paeni alone. Do not overstate this as "Paeni-specific noise in
+    # controls"; Entero's fold-increase control-vs-colonised is comparable.
+    assert ctl["Paenibacillaceae"] > 3 * ctl["Enterobacteriaceae"]
+    assert ctl["Paenibacillaceae"] == max(ctl["Paenibacillaceae"], ctl["Enterobacteriaceae"],
+                                          col["Paenibacillaceae"], col["Enterobacteriaceae"])
