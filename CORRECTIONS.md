@@ -11,6 +11,7 @@ still yields the published number**, so the manuscript stays reproducible.
 | 1 | Fig. 4C one-sided **P = 0.019** | **P ~ 0.21-0.27**, not significant | `figures/figure4.py` |
 | 2 | Fig. 3B **rho = -0.43, n = 1545** | **rho = -0.690 (w5) / -0.813 (w10), n = 113 / 73** | `jacobian.dominant_eigenvalue` |
 | 3 | "ninefold weakening of interactions" | amplitude, not interaction structure | `jacobian.corr` |
+| 3b | Fig. 2C at a single window | holds; amplitude-free counterpart needs win >= 9 | `jacobian.summarise_corr` |
 | 4 | "inhibitory-to-facilitative shift" | shift toward **symmetry**, never past it | `summarise_corr.frac_positive` |
 
 ---
@@ -77,19 +78,36 @@ links become less PREVALENT.
 **It stops at symmetry.** Low- vs high-diversity means: 0.412 -> 0.470, 0.327 -> 0.471,
 0.427 -> 0.511, 0.345 -> 0.487. Never durably above 0.5. Facilitation is not reached.
 
-**Against DIVERSITY, nothing scale-free is robust.** Every statistic flips sign between
-windows or fails significance in most configurations:
+**Against DIVERSITY the relationship is real but needs a wide enough window.** The
+scale-free statistic is a Pearson correlation and needs more samples to estimate than a
+covariance does. Sweeping the window over all 8 mice:
 
-| vs diversity | c1 w5 | c1 w10 | all8 w5 | all8 w10 |
-|---|---|---|---|---|
-| frac_positive | +0.250 n.s. | +0.286 n.s. | +0.228 | +0.168 n.s. |
-| mean_absolute | +0.316 | **-0.455** | +0.167 n.s. | **-0.348** |
-| mean_negative | -0.241 n.s. | **+0.572** | -0.074 n.s. | **+0.502** |
+| win | n | raw J | scale-free R | median \|R\| | IQR \|R\| |
+|---|---|---|---|---|---|
+| 3 | 129 | +0.632 | -0.083 n.s. | 0.525 | 0.230 |
+| 5 | 113 | **+0.732** | -0.074 n.s. | 0.390 | 0.156 |
+| 7 | 97 | +0.652 | +0.073 n.s. | 0.318 | 0.124 |
+| 8 | 89 | +0.609 | +0.204 n.s. | 0.309 | 0.101 |
+| 9 | 81 | +0.581 | **+0.383** | 0.280 | 0.079 |
+| 10 | 73 | +0.574 | **+0.502** | 0.287 | 0.083 |
+| 11 | 65 | +0.500 | **+0.412** | 0.287 | 0.086 |
+| 12 | 57 | +0.355 | **+0.412** | 0.261 | 0.084 |
 
-**Published Figure 2C (mean negative J vs diversity, rho = +0.737) therefore has no
-robust amplitude-free counterpart.** Its scale-free equivalent runs -0.241 at window 5
-and +0.572 at window 10. Report the temporal result; treat the diversity relationship as
-window-dependent, or state the amplitude caveat with it.
+Median |R| falls from 0.525 to 0.261 and its IQR from 0.230 to 0.084 as the window
+widens - the signature of small-sample correlation noise, which inflates |R| and
+attenuates its correlation with anything else. The scale-free relationship appears from
+window 9, exactly where R stabilises.
+
+Not a range effect: restricting both windows to the same diversity range (1D > 1.5)
+leaves win 5 at -0.018 n.s. and win 10 at +0.500. Same data span, different window.
+
+**Reading.** Figure 2C is supported, with a stated caveat: the raw statistic is
+significant at every window (+0.63 to +0.73), and its amplitude-free counterpart is
+significant wherever the window is wide enough to estimate a correlation (win >= 9,
+rho = +0.38 to +0.50). Report the window sweep rather than a single window. Note also
+that diversity here is close to a relabelled time axis - it is flat at 1.0 until the
+Paenibacillaceae onset then plateaus near 2.1 - so the diversity and time analyses are
+largely the same result seen twice.
 
 ## 5. Control Paenibacillaceae was filtered, not absent
 
